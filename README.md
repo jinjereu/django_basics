@@ -104,7 +104,7 @@ urlpatterns = [
 	path('', views.result, name='result')
 ]
 ```
-[path: https://docs.djangoproject.com/en/2.1/ref/urls/#django.urls.path]
+[path()]: https://docs.djangoproject.com/en/2.1/ref/urls/#django.urls.path
 
 3. Point the root URLconf at the `polls.urls` module in `mysite/urls.py` by using the `include()` function
 
@@ -114,3 +114,85 @@ urlpatterns = [
 	path('admin/', admin.site.urls),
 ]
 ```
+
+## Part 2 Summary: Database, Models and Admin introduction
+
+### Database setup
+
+By default the configuration uses SQLite. The configuration can be found in `<project: mysite>/settings.py` in the `DATABASES` settings configuration.
+
+If you not using SQLite, additional settings such as ` USER` , `PASSWORD`, `HOST` must be added. See reference documentation for [DATABASES]
+
+[DATABASES]: https://docs.djangoproject.com/en/2.1/ref/settings/#std:setting-DATABASES
+
+1. Edit `TIME_ZONE` to your time zone
+2. Run `python manage.py migrate` - looks at `INSTALLED_APPS` setting to and creates the necessary db settings
+3. Tell the project that the `polls` app is installed. Update `mysite/settings.py` and add the polls config app to the `INSTALLED_APPS` setting. 
+```
+INSTALLED_APPS = [
+'polls.apps.PollsConfig',
+...
+]
+```
+
+### Recipe: Models
+
+A model is a single source of truth about the fields and behaviors of the data you are storing. Django follows DRY Principle - defining data model in one place and derive all things from it.  
+
+Django will derive from the model to create the DB schema and create Python DB access API.
+
+1. Change your models. 
+* Edit the `<app: polls>/models.py` adding a `Class` definition for each entity you want represented in the application. 
+* Add the fields represented by an instance of a `Field` class. Note that some `Field` classes have required arguments.  Define relationships with `ForeignKey()`
+* Add relevant methods to your model
+
+```
+from django.db import models
+
+class Question(models.Model):
+	question_text = models.CharField(max_length=200)
+	pub_date = models.DateTimeField('date published')
+	
+	def was_published_recently(self):
+	return self.pub_date >= timezone.now() - datetime.timedelta(days=1)
+	
+class Choice(models.Model):
+	question = models.ForeignKey(Question, on_delete=models.CASCADE)
+	choice_text = models.CharField(max_length=200)
+	votes = models.IntegerField(default=0)
+```
+2. Create migrations for changes:  
+`python manage.py makemigrations <appname: polls>`
+
+3. Apply changes to the database:
+`python manage.py migrate`
+
+4. If you want to make the app's models modifiable in the admin page we need to register the model in `<app: polls>/admin.py`
+
+```
+from .models import Question
+
+admin.site.register(Question)
+```
+
+### Creating an admin user
+
+The Django automates the creation of admin interfaces for models. The Django admin site is activated by default 
+
+1. Create a user to login to the admin site, enter desired username, email address and password
+`python manage.py createsuperuser`
+2. Start the development server 
+`python manage.py runserver`
+3. Access the admin site at `<http:>//<domain>/admin/`
+
+
+
+
+
+
+
+
+
+
+
+
