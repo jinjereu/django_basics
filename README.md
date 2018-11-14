@@ -185,14 +185,101 @@ The Django automates the creation of admin interfaces for models. The Django adm
 `python manage.py runserver`
 3. Access the admin site at `<http:>//<domain>/admin/`
 
+## Part 3 Summary: 
+
+### Writing views with arguments and raising exception
+
+
+1. You can also write views with an argument which you provide through the URL. For example, in `polls/views.py` 
+
+```
+from django.shortcuts import get_object_or_404, render
+
+def detail(request, question_id):
+	# It is very common to raise HTTP404 exception so this shortcut can be used
+	# There is also a get_list_or_404() method for lists
+	question = get_object_or_404(Question, pk=question_id)
+	return render(request, 'polls/detail.html', {'question': question})
+
+
+def results(request, question_id):
+	response = "You're looking at the results of question %s."
+	return HttpResponse(response % question_id)
+```
 
 
 
+2. Wire the views to `polls.urls`. Also add the namespace via `appname=polls` to differentiate it from other apps in the project. 
+
+```
+appname = `polls`
+urlpatterns = [
+	...
+	# ex: /polls/5/
+	path('<int:question_id>/', views.detail, name='detail'),
+	# ex: /polls/5/results/
+	path('<int:question_id>/results/', views.results, name='results'),
+]
+```
+
+Using angle brackets as in `<int:question_id>` "captures" part of the URL and sends it as a keyword argument to the view function. 
+- The `question_id` part of the string defines the name that will be used to identify the matched pattern.
+- The `<int:` paer is a converter that determines what patterns should match this part of the URL path
+
+### Writing views and output to template
+
+`TEMPLATES` setting describes how it will render templates and by convention it looks for a `templates` subdirectory in each of the `INSTALLED_APPS`.  
+
+Python code is declared in template as `{% %}` 
+Meanwhile to access variable attributes, use the dot-lookup syntax for ex. `{{ question.question_text }}`
+
+1. Create directory `templates` in `polls` directory. 
+
+This is where Django will look for the templates. 
+
+2.  Within the `templates` directory, create another directory called `polls` and within that create a file called `index.html`
+
+The full url is `polls/templates/polls/index.html`
+This is how `app_directories` template loader will locate the templates as described above. 
+But you can refer to it in Django simply as `polls.index.html` 
+
+3. Update `index.html` template 
+
+```
+{% if latest_question_list %}
+	<ul>
+	{% for question in latest_question_list %}
+	# We don't use specific URL Paths for the case that we need to update it. See urlpatterns where we declare the name of the url to go to via the name 'detail`
+	<li><a href="{% url 'polls:detail' question.id %}">{{ question.question_text }}</a></li></a></li>
+	{% endfor %}
+	</ul>
+{% else %}
+	<p>No polls are available.</p>
+{% endif %}
+```
 
 
 
+4. Update  `views.py` to use the template: 
 
+Method A: Using `loader` for template
+```
+from django.template import loader
 
+def index(request):
+	latest_question_list = Question.objects.order_by('-pub_date')[:5]
+	template = loader.get_template('polls/index.html')
+	context = {
+	'latest_question_list': latest_question_list,
+	}
+	return HttpResponse(template.render(context, request))
+```
+Method B: Using ` render` for template
+```
+from django.shortcuts import render
 
-
-
+def index(request):
+	latest_question_list = Question.objects.order_by('-pub_date')[:5]
+	context = {'latest_question_list': latest_question_list}
+	return render(request, 'polls/index.html', context)
+```
